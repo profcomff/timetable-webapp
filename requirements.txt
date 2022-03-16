@@ -5,3 +5,4 @@ pydantic[dotenv]
 uvicorn
 alembic
 jinja2
+aiofiles
