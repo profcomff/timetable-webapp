@@ -11,11 +11,11 @@ from pydantic.types import Json
 from .db import Credentials
 from .settings import Settings
 
-app = FastAPI()
+
 settings = Settings()
+app = FastAPI(root_path=settings.APP_URL)
 templates = Jinja2Templates(directory="templates")
 app.add_middleware(DBSessionMiddleware, db_url=settings.DB_DSN)
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")

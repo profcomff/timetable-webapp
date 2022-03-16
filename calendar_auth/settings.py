@@ -1,5 +1,5 @@
 from pydantic import BaseSettings, Json, PostgresDsn, AnyHttpUrl
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -7,6 +7,7 @@ class Settings(BaseSettings):
 
     DB_DSN: PostgresDsn
     GOOGLE_CREDS: Json
+    APP_URL: Optional[AnyHttpUrl] = None
     REDIRECT_URL: AnyHttpUrl = "https://www.profcomff.com"
     GROUPS: List[str] = ["101", "102"]
 
