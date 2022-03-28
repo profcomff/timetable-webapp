@@ -1,6 +1,7 @@
+from email import message
 from urllib.parse import unquote
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +11,6 @@ from pydantic.types import Json
 
 from .db import Credentials
 from .settings import Settings
-
 
 settings = Settings()
 app = FastAPI(root_path=settings.APP_URL)
@@ -45,16 +45,46 @@ def get_credentials(
     if not group:
         raise HTTPException(403, "No group provided")
 
-    db.session.add(
-        Credentials(
-            code=code,
+    db_records = db.session.query(Credentials).filter(Credentials.authuser == authuser)
+    if db_records.count() == 0:
+        db.session.add(
+            Credentials(
+                code=code,
+                scope=scope,
+                group=group,
+                prompt=prompt,
+                authuser=authuser,
+                hd=hd,
+            )
+        )
+    else:
+        db_records.update(
+                dict(code=code,
+                scope=scope,
+                group=group,
+                prompt=prompt,
+                hd=hd))
+    db.session.commit()
+
+    '''async def init_service( 
+        code: str,
+        scope: str,
+        prompt: str,
+        authuser: int,
+        hd: str, 
+        background_tasks: BackgroundTasks
+    ):
+        background_tasks.add_task(get_service, code=code,
             scope=scope,
             group=group,
             prompt=prompt,
             authuser=authuser,
-            hd=hd,
-        )
-    )
-    db.session.commit()
-
+            hd=hd)
+        return {'message': 'ок'}'''
+        
     return RedirectResponse(settings.REDIRECT_URL)
+
+
+
+    
+    
