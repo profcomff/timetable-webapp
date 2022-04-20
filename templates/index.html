@@ -20,15 +20,10 @@
     <script>
         function send_request() {
             let group = document.getElementById("group-name").value;
-            let url = new URL('{{ google_creds.web.auth_uri }}');
-            url.searchParams.set('scope', 'https://www.googleapis.com/auth/calendar.app.created https://www.googleapis.com/auth/userinfo.email');
-            url.searchParams.set('access_type', 'offline');
-            url.searchParams.set('response_type', 'code');
-            url.searchParams.set('state', `{"group": ${group}}`);
-            url.searchParams.set('redirect_uri', '{{ google_creds.web.redirect_uris[0] }}');
-            url.searchParams.set('client_id', '{{ google_creds.web.client_id }}');
-            // console.log(url.href)
-            window.open(url, 'popup', 'width=600,height=600');
+            let flow_url = new URL(location.origin + '/flow');
+            flow_url.searchParams.set('state', `{"group": ${group}}`);
+              //console.log(flow_url);
+            window.location.href = flow_url.href;
             return false;
         }
     </script>
