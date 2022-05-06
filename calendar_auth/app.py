@@ -9,6 +9,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_sqlalchemy import DBSessionMiddleware, db
+from fastapi_sqlalchemy.exceptions import SessionNotInitialisedError, MissingSessionError
 from fastapi.templating import Jinja2Templates
 from google_auth_oauthlib.flow import Flow
 import google.oauth2.credentials
@@ -28,7 +29,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 user_flow = Flow.from_client_secrets_file(
     client_secrets_file=settings.PATH_TO_GOOGLE_CREDS,
     scopes=settings.SCOPES,
-    state=settings.DEFAULT_GROUP,
+    state=settings.DEFAULT_GROUP_STATE,
     redirect_uri='http://localhost:8000/credentials'
 )
 
@@ -68,30 +69,36 @@ def get_credentials(
     creds = user_flow.credentials
     token: Json = creds.to_json()
     # build service to get an email address
-    email_service = build('oauth2', 'v2', credentials=creds)
-    email = email_service.userinfo().get().execute()['email']
+    service = build('oauth2', 'v2', credentials=creds)
+    email = service.userinfo().get().execute()['email']
     # background_tasks.add_task(get_service, creds)
 
-    if not group:
+    if group not in settings.GROUPS:
         raise HTTPException(403, "No group provided")
+    try:
+        db_records = db.session.query(Credentials).filter(Credentials.email == email)
 
-    db_records = db.session.query(Credentials).filter(Credentials.email == email)
-
-    if not db_records.count():
-        db.session.add(
-            Credentials(
-                group=group,
-                email=email,
-                scope=scope,
-                token=token,
+        if not db_records.count():
+            db.session.add(
+                Credentials(
+                    group=group,
+                    email=email,
+                    scope=scope,
+                    token=token,
+                )
             )
-        )
-    else:
-        db_records.update(
-            dict(
-                group=group,
-                scope=scope,
+        else:
+            db_records.update(
+                dict(
+                    group=group,
+                    scope=scope,
+                )
             )
-        )
-    db.session.commit()
+        db.session.commit()
+        
+    except SessionNotInitialisedError:
+        raise HTTPException(500, "DB session not initialized")
+    except MissingSessionError:
+        raise HTTPException(500, "Missing db session")
+    
     return RedirectResponse(settings.REDIRECT_URL)
