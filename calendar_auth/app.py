@@ -72,9 +72,9 @@ def get_credentials(
     service = build('oauth2', 'v2', credentials=creds)
     email = service.userinfo().get().execute()['email']
     # background_tasks.add_task(get_service, creds)
-
-    if group not in settings.GROUPS:
+    if str(group) not in settings.GROUPS:
         raise HTTPException(403, "No group provided")
+
     try:
         db_records = db.session.query(Credentials).filter(Credentials.email == email)
 
@@ -95,10 +95,10 @@ def get_credentials(
                 )
             )
         db.session.commit()
-        
+
     except SessionNotInitialisedError:
-        raise HTTPException(500, "DB session not initialized")
+        print("DB session not initialized")
     except MissingSessionError:
-        raise HTTPException(500, "Missing db session")
-    
+        print("Missing db session")
+
     return RedirectResponse(settings.REDIRECT_URL)
